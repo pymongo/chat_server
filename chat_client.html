@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Chat Client(WebSocket)</title>
+    <!-- Modified from: https://github.com/actix/examples/blob/a66c05448eace8b1ea53c7495b27604e7e91281c/websockets/chat-broker/static/index.html -->
+    <style>
+        :root {
+            font-size: 18px;
+        }
+
+        input[type='text'] {
+            font-size: inherit;
+        }
+
+        #log {
+            width: 30em;
+            height: 20em;
+            overflow: auto;
+            margin: 0.5em 0;
+            border: 1px solid black;
+        }
+
+        #status {
+            padding: 0 0.2em;
+        }
+
+        #url, #text {
+            width: 17em;
+            padding: 0.5em;
+        }
+
+        .msg {
+            margin: 0;
+            padding: 0.25em 0.5em;
+        }
+
+        .msg--status {
+            background-color: #ffffc9;
+        }
+
+        .msg--message {
+            background-color: #d2f4ff;
+        }
+
+        .msg--error {
+            background-color: pink;
+        }
+    </style>
+</head>
+<body>
+<h2>Chat Client</h2>
+<form id="urlform">
+    <label for="url">usage: click submit and then click connect</label>
+    <input type="text" id="url" value="ws://127.0.0.1:9007"/>
+    <input type="submit"/>
+</form>
+
+<div>
+    <span>Status:</span>
+    <span id="status">disconnected</span>
+    <button id="connect">Connect</button>
+</div>
+
+<div id="log"></div>
+
+<form id="chatform">
+    <label for="text"></label>
+    <input type="text" id="text"/>
+    <input type="submit" id="send"/>
+</form>
+
+<script>
+    const status = document.querySelector('#status')
+    const connectButton = document.querySelector('#connect')
+    connectButton.disabled = true;
+    const log = document.querySelector('#log')
+    const textInput = document.querySelector('#text')
+
+    /** @type {WebSocket | null} */
+    let socket = null
+    let websocketUrl = "";
+
+    function logStatus(msg, type = 'status') {
+        log.innerHTML += `<p class="msg msg--${type}">${msg}</p>`
+        log.scrollTop += 1000
+    }
+
+    function connect() {
+        disconnect()
+        logStatus('Connecting...')
+        socket = new WebSocket(websocketUrl)
+
+        socket.onopen = () => {
+            logStatus('Connected')
+            updateConnectionStatus()
+        }
+
+        socket.onmessage = (ev) => {
+            logStatus('Received: ' + ev.data, 'message')
+        }
+
+        socket.onclose = () => {
+            logStatus('Disconnected')
+            socket = null
+            updateConnectionStatus()
+        }
+    }
+
+    function disconnect() {
+        if (socket) {
+            logStatus('Disconnecting...')
+            socket.close()
+            socket = null
+
+            updateConnectionStatus()
+        }
+    }
+
+    function updateConnectionStatus() {
+        if (socket) {
+            status.style.backgroundColor = 'transparent'
+            status.style.color = 'green'
+            status.textContent = `connected`
+            connectButton.innerHTML = 'Disconnect'
+            textInput.focus()
+        } else {
+            status.style.backgroundColor = 'red'
+            status.style.color = 'white'
+            status.textContent = 'disconnected'
+            connectButton.textContent = 'Connect'
+        }
+    }
+
+    document.querySelector('#urlform').addEventListener('submit', (event)=>{
+        event.preventDefault()
+        connectButton.disabled = false
+        websocketUrl = document.querySelector('#url').value
+    })
+
+    connectButton.addEventListener('click', () => {
+        if (socket) {
+            disconnect()
+        } else {
+            connect()
+        }
+        updateConnectionStatus()
+    })
+
+    document.querySelector('#chatform').addEventListener('submit', (ev) => {
+        ev.preventDefault()
+
+        const text = textInput.value
+
+        logStatus('Sending: ' + text)
+        socket.send(text)
+
+        textInput.value = ''
+        textInput.focus()
+    })
+
+    updateConnectionStatus()
+</script>
+</body>
+</html>

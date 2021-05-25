@@ -1,0 +1,13 @@
+[package]
+name = "chat_server"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+tokio = { version="1.0", features=["full"] }
+tokio-tungstenite = "*"
+tungstenite = "*"
+futures-util = "*"
+env_logger = "*"
+log = "*"
+chrono = "*"
