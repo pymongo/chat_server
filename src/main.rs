@@ -1,13 +1,9 @@
 use futures_util::{stream::SplitSink, SinkExt, StreamExt};
 use log::info;
 use std::sync::Arc;
+use std::time::Instant;
 use tokio_tungstenite::{accept_async, WebSocketStream};
 use tungstenite::Message as WsMessage;
-
-#[link(name = "c", kind = "dylib")]
-extern "C" {
-    fn time(output: *mut i64) -> i64;
-}
 
 #[derive(Clone, Debug)]
 struct ChatMessage {
@@ -37,13 +33,13 @@ struct AppState {
 struct ConnectionState {
     username: Option<String>,
     // client last pong msg timestamp
-    last_heartbeat_timestamp: i64,
+    last_heartbeat_timestamp: Instant,
     ws_sender: SplitSink<WebSocketStream<tokio::net::TcpStream>, WsMessage>,
     new_msg_notify_sender: tokio::sync::broadcast::Sender<ChatMessage>,
 }
 
 impl ConnectionState {
-    const HEARTBEAT_TIMEOUT: i64 = 15;
+    const HEARTBEAT_TIMEOUT: u64 = 15;
 
     async fn handle_client_msg(
         &mut self,
@@ -124,7 +120,7 @@ async fn accept_connection(
         username: None,
         ws_sender,
         new_msg_notify_sender: app_state.new_msg_notify_sender.clone(),
-        last_heartbeat_timestamp: unsafe { time(std::ptr::null_mut()) },
+        last_heartbeat_timestamp: Instant::now(),
     };
 
     // send history chat messages when client connect
@@ -150,7 +146,7 @@ async fn accept_connection(
                             },
                             WsMessage::Pong(_) => {
                                 info!("server receive client pong frame");
-                                connection_state.last_heartbeat_timestamp = unsafe { time(std::ptr::null_mut()) };
+                                connection_state.last_heartbeat_timestamp = Instant::now();
                             },
                             WsMessage::Close(_) => break,
                             WsMessage::Binary(_) => unreachable!()
@@ -165,7 +161,7 @@ async fn accept_connection(
             }
             // send ping frame to client every 5s to keep alive
             _ = interval.tick() => {
-                if unsafe { time(std::ptr::null_mut()) } - connection_state.last_heartbeat_timestamp > ConnectionState::HEARTBEAT_TIMEOUT {
+                if connection_state.last_heartbeat_timestamp.elapsed().as_secs() > ConnectionState::HEARTBEAT_TIMEOUT {
                     info!("server close dead connection");
                     break;
                 }
