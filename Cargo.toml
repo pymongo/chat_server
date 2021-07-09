@@ -2,12 +2,14 @@
 name = "chat_server"
 version = "0.1.0"
 edition = "2018"
+default-run = "server"
 
 [dependencies]
-tokio = { version="1.0", features=["full"] }
-tokio-tungstenite = "*"
-tungstenite = "*"
-futures-util = "*"
-env_logger = "*"
-log = "*"
-chrono = "*"
+libc = "0.2.98"
+tokio = { version="1.8.1", features=["sync", "time", "rt-multi-thread","macros"] }
+tokio-tungstenite = "0.15.0"
+tungstenite = "0.14.0"
+futures-util = "0.3.15"
+env_logger = "0.8.4"
+log = "0.4.14"
+chrono = "0.4.19"
